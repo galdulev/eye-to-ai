@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ההרצאה של גל דולב</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body data-emotion="neutral">
+
+  <!-- Black screen overlay -->
+  <div id="blackout"></div>
+
+  <!-- Section title card -->
+  <div id="section-card"></div>
+
+  <!-- Section picker overlay -->
+  <div id="section-picker"></div>
+
+  <!-- Timer -->
+  <div id="timer">
+    <span class="elapsed" id="timer-elapsed">0:00</span>
+    <span class="sep">/</span>
+    <span class="budget" id="timer-budget">--:--</span>
+  </div>
+
+  <!-- Total elapsed -->
+  <div id="total-timer">0:00</div>
+
+  <!-- Main layout -->
+  <div id="app">
+    <div id="chunks"></div>
+    <div id="margin">
+      <div id="emotion-stripe"></div>
+    </div>
+    <div id="footer">
+      <div id="progress-bar">
+        <div id="progress-fill"></div>
+      </div>
+      <div id="section-dots"></div>
+    </div>
+  </div>
+
+  <script src="content.js"></script>
+  <script src="script.js"></script>
+</body>
+</html>
