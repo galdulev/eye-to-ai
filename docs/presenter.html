@@ -1,0 +1,828 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ההרצאה של גל דולב — Presenter View</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Heebo:wght@300;400;700;900&display=swap" rel="stylesheet">
+<script src="https://hypothes.is/embed.js" async></script>
+<style>
+  :root {
+    --bg: #111110;
+    --surface: #1a1a18;
+    --border: #2a2a26;
+    --text: #e8e4dc;
+    --text-dim: #8a8678;
+    --accent: #d4a04a;
+    --accent-dim: #8a6a2e;
+    --direction: #c06040;
+    --direction-bg: rgba(192, 96, 64, 0.08);
+    --highlight: #f0d890;
+    --section-active: #d4a04a;
+    --nav-bg: #151514;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    font-family: 'Heebo', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    line-height: 1.8;
+    overflow: hidden;
+    height: 100vh;
+  }
+
+  .layout {
+    display: grid;
+    grid-template-columns: 220px 1fr;
+    height: 100vh;
+  }
+
+  /* --- NAV --- */
+  nav {
+    background: var(--nav-bg);
+    border-left: 1px solid var(--border);
+    padding: 24px 0;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    overflow-y: auto;
+  }
+
+  nav .nav-title {
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    color: var(--text-dim);
+    padding: 0 20px 16px;
+    text-transform: uppercase;
+  }
+
+  nav a {
+    display: flex;
+    align-items: baseline;
+    gap: 10px;
+    padding: 10px 20px;
+    text-decoration: none;
+    color: var(--text-dim);
+    font-size: 13px;
+    font-weight: 400;
+    transition: all 0.2s;
+    border-right: 3px solid transparent;
+  }
+
+  nav a:hover {
+    color: var(--text);
+    background: rgba(212, 160, 74, 0.05);
+  }
+
+  nav a.active {
+    color: var(--accent);
+    font-weight: 700;
+    border-right-color: var(--accent);
+    background: rgba(212, 160, 74, 0.08);
+  }
+
+  nav a .nav-num {
+    font-size: 11px;
+    font-weight: 700;
+    color: var(--accent-dim);
+    min-width: 22px;
+  }
+
+  nav a.active .nav-num {
+    color: var(--accent);
+  }
+
+  nav a .nav-time {
+    font-size: 10px;
+    color: var(--text-dim);
+    opacity: 0.6;
+    margin-right: auto;
+  }
+
+  nav .nav-spacer {
+    flex: 1;
+  }
+
+  nav .nav-keys {
+    padding: 16px 20px;
+    border-top: 1px solid var(--border);
+    font-size: 10px;
+    color: var(--text-dim);
+    opacity: 0.5;
+    line-height: 1.8;
+  }
+
+  nav .nav-keys kbd {
+    display: inline-block;
+    background: var(--border);
+    border-radius: 3px;
+    padding: 1px 6px;
+    font-family: inherit;
+    font-size: 10px;
+  }
+
+  /* --- MAIN --- */
+  main {
+    overflow-y: auto;
+    scroll-behavior: smooth;
+    padding: 0;
+  }
+
+  .section {
+    padding: 60px 80px 80px;
+    border-bottom: 1px solid var(--border);
+    min-height: 50vh;
+    transition: opacity 0.3s;
+  }
+
+  .section:last-child {
+    border-bottom: none;
+  }
+
+  .section-header {
+    display: flex;
+    align-items: baseline;
+    gap: 16px;
+    margin-bottom: 40px;
+  }
+
+  .section-num {
+    font-size: 14px;
+    font-weight: 900;
+    color: var(--accent);
+    background: rgba(212, 160, 74, 0.12);
+    border-radius: 6px;
+    padding: 4px 10px;
+    letter-spacing: 0.05em;
+  }
+
+  .section-title {
+    font-size: 22px;
+    font-weight: 900;
+    color: var(--accent);
+  }
+
+  .section-time {
+    font-size: 13px;
+    color: var(--text-dim);
+    font-weight: 300;
+  }
+
+  /* Spoken text */
+  .spoken {
+    font-size: 26px;
+    font-weight: 400;
+    line-height: 1.9;
+    color: var(--text);
+    max-width: 780px;
+  }
+
+  .spoken + .spoken {
+    margin-top: 28px;
+  }
+
+  .spoken strong {
+    font-weight: 700;
+    color: var(--highlight);
+  }
+
+  .spoken em {
+    font-style: normal;
+    color: var(--accent);
+  }
+
+  /* Stage directions */
+  .direction {
+    font-size: 15px;
+    font-weight: 300;
+    color: var(--direction);
+    background: var(--direction-bg);
+    border-radius: 8px;
+    padding: 10px 18px;
+    margin: 20px 0;
+    max-width: 780px;
+    border-right: 3px solid var(--direction);
+  }
+
+  /* Subsection headers */
+  .sub-title {
+    font-size: 17px;
+    font-weight: 700;
+    color: var(--accent);
+    margin-top: 48px;
+    margin-bottom: 20px;
+    padding-bottom: 8px;
+    border-bottom: 1px solid var(--border);
+    max-width: 780px;
+  }
+
+  /* Lists */
+  .spoken-list {
+    list-style: none;
+    padding: 0;
+    max-width: 780px;
+  }
+
+  .spoken-list li {
+    font-size: 22px;
+    line-height: 1.8;
+    color: var(--text);
+    padding: 6px 0;
+    padding-right: 28px;
+    position: relative;
+  }
+
+  .spoken-list li strong {
+    color: var(--highlight);
+  }
+
+  .spoken-list li::before {
+    content: attr(data-n);
+    position: absolute;
+    right: 0;
+    color: var(--accent-dim);
+    font-size: 16px;
+    font-weight: 700;
+  }
+
+  /* Takeaways */
+  .takeaway-list {
+    list-style: none;
+    padding: 0;
+    max-width: 780px;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+  }
+
+  .takeaway-list li {
+    font-size: 24px;
+    line-height: 1.7;
+    color: var(--text);
+    padding: 16px 24px;
+    background: var(--surface);
+    border-radius: 10px;
+    border-right: 4px solid var(--accent);
+  }
+
+  .takeaway-list li strong {
+    color: var(--highlight);
+    display: block;
+    font-size: 26px;
+  }
+
+  .takeaway-list li span {
+    font-size: 20px;
+    color: var(--text-dim);
+    font-weight: 300;
+  }
+
+  /* Progress bar */
+  .progress {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 3px;
+    background: var(--border);
+    z-index: 100;
+  }
+
+  .progress-bar {
+    height: 100%;
+    background: var(--accent);
+    width: 0%;
+    transition: width 0.3s;
+  }
+
+  /* Message box */
+  .message-box {
+    background: var(--surface);
+    border: 1px solid var(--accent-dim);
+    border-radius: 12px;
+    padding: 24px 28px;
+    margin-bottom: 48px;
+    max-width: 780px;
+  }
+
+  .message-box .label {
+    font-size: 11px;
+    font-weight: 700;
+    color: var(--accent);
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    margin-bottom: 8px;
+  }
+
+  .message-box p {
+    font-size: 22px;
+    line-height: 1.7;
+    color: var(--text);
+  }
+
+  /* Demo list */
+  .demo-list {
+    list-style: none;
+    padding: 0;
+    max-width: 780px;
+  }
+
+  .demo-list li {
+    font-size: 20px;
+    line-height: 1.6;
+    color: var(--text-dim);
+    padding: 8px 0 8px 0;
+    padding-right: 36px;
+    position: relative;
+  }
+
+  .demo-list li strong {
+    color: var(--text);
+  }
+
+  .demo-list li::before {
+    content: attr(data-n);
+    position: absolute;
+    right: 0;
+    color: var(--accent-dim);
+    font-size: 14px;
+    font-weight: 700;
+    top: 10px;
+  }
+
+  /* Editable states */
+  [contenteditable] {
+    outline: none;
+    border-radius: 4px;
+    transition: box-shadow 0.2s, background 0.2s;
+  }
+
+  [contenteditable]:hover {
+    box-shadow: inset 0 0 0 1px rgba(212, 160, 74, 0.15);
+  }
+
+  [contenteditable]:focus {
+    box-shadow: inset 0 0 0 2px rgba(212, 160, 74, 0.35);
+    background: rgba(212, 160, 74, 0.04);
+  }
+
+  .save-toast {
+    position: fixed;
+    bottom: 24px;
+    left: 24px;
+    background: var(--surface);
+    border: 1px solid var(--accent-dim);
+    color: var(--accent);
+    font-size: 13px;
+    font-weight: 700;
+    padding: 8px 18px;
+    border-radius: 8px;
+    opacity: 0;
+    transform: translateY(8px);
+    transition: all 0.3s;
+    pointer-events: none;
+    z-index: 200;
+    font-family: 'Heebo', sans-serif;
+  }
+
+  .save-toast.show {
+    opacity: 1;
+    transform: translateY(0);
+  }
+
+  .export-btn {
+    position: fixed;
+    bottom: 24px;
+    left: 120px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    color: var(--text-dim);
+    font-size: 12px;
+    font-weight: 400;
+    padding: 8px 16px;
+    border-radius: 8px;
+    cursor: pointer;
+    z-index: 200;
+    font-family: 'Heebo', sans-serif;
+    transition: all 0.2s;
+  }
+
+  .export-btn:hover {
+    border-color: var(--accent-dim);
+    color: var(--accent);
+  }
+
+  .reset-btn {
+    position: fixed;
+    bottom: 24px;
+    left: 240px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    color: var(--text-dim);
+    font-size: 12px;
+    font-weight: 400;
+    padding: 8px 16px;
+    border-radius: 8px;
+    cursor: pointer;
+    z-index: 200;
+    font-family: 'Heebo', sans-serif;
+    transition: all 0.2s;
+  }
+
+  .reset-btn:hover {
+    border-color: #c06040;
+    color: #c06040;
+  }
+
+  @media (max-width: 900px) {
+    .layout {
+      grid-template-columns: 1fr;
+    }
+    nav { display: none; }
+    .section { padding: 40px 28px 60px; }
+    .spoken { font-size: 22px; }
+  }
+</style>
+</head>
+<body>
+
+<div class="progress"><div class="progress-bar" id="progressBar"></div></div>
+
+<div class="layout">
+  <nav id="nav">
+    <div class="nav-title">מבנה ההרצאה</div>
+    <a href="#s0" data-section="s0"><span class="nav-num">0</span> סרטון דמו <span class="nav-time">3׳</span></a>
+    <a href="#s1" data-section="s1"><span class="nav-num">1</span> הצגה עצמית <span class="nav-time">30״</span></a>
+    <a href="#s2" data-section="s2"><span class="nav-num">2</span> הילדה בת 11 <span class="nav-time">4׳</span></a>
+    <a href="#s3" data-section="s3"><span class="nav-num">3</span> הגניבה <span class="nav-time">5׳</span></a>
+    <a href="#s4" data-section="s4"><span class="nav-num">4</span> ההבנה <span class="nav-time">4׳</span></a>
+    <a href="#s5" data-section="s5"><span class="nav-num">5</span> הדרך החדשה <span class="nav-time">10׳</span></a>
+    <a href="#s6" data-section="s6"><span class="nav-num">6</span> מה עוד אפשר <span class="nav-time">1.5׳</span></a>
+    <a href="#s65" data-section="s65"><span class="nav-num">6.5</span> טייקאווייז <span class="nav-time">1׳</span></a>
+    <a href="#s7" data-section="s7"><span class="nav-num">7</span> סגירה <span class="nav-time">2׳</span></a>
+    <div class="nav-spacer"></div>
+    <div class="nav-keys">
+      <kbd>&uarr;</kbd> <kbd>&darr;</kbd> מעבר בין חלקים<br>
+      <kbd>F</kbd> מסך מלא<br>
+      לחצו על טקסט כדי לערוך
+    </div>
+  </nav>
+
+  <main id="main">
+
+    <!-- MESSAGE -->
+    <div class="section" id="smsg">
+      <div class="message-box">
+        <div class="label">המסר המרכזי</div>
+        <p>אני יכולה ליצור מתוך הילדה שבי, הייחודיות שבי, המשחקיות שלי — בזכות AI.</p>
+        <p>הייחודיות שלי היא מה שהופך פתרון גנרי לפתרון שנכון ליוזר שלי.</p>
+      </div>
+    </div>
+
+    <!-- [0] DEMO -->
+    <div class="section" id="s0">
+      <div class="section-header">
+        <span class="section-num">0</span>
+        <span class="section-title">סרטון דמו — לפני העלייה לבמה</span>
+        <span class="section-time">~3 דקות | לא נספר מתוך ה-35</span>
+      </div>
+      <p class="spoken">דמו שרואים אותי בו — בלי הסברים, בלי כתוביות. רק אני עובדת:</p>
+      <ol class="demo-list">
+        <li data-n="1"><strong>צוללת לדאטה ומבינה בעיה גדולה</strong></li>
+        <li data-n="2"><strong>אומרת לצוות של סוכני AI להוציא צילומי מסך</strong> של איך מתחרים פתרו את הבעיה</li>
+        <li data-n="3"><strong>מציירת על דף A4 שמונה רעיונות</strong> — רגע אנושי, בלי מחשב</li>
+        <li data-n="4"><strong>את הציור נותנת ל-Cursor</strong> — וזה הופך לעיצוב</li>
+        <li data-n="5"><strong>יוזר טסטינג</strong> על הפתרון</li>
+        <li data-n="6"><strong>סינתזה</strong> בעצמי ועם AI</li>
+        <li data-n="7"><strong>בונה משחק סימס</strong> לפרזנטציה לסטייקהולדרים</li>
+      </ol>
+    </div>
+
+    <!-- [1] INTRO -->
+    <div class="section" id="s1">
+      <div class="section-header">
+        <span class="section-num">1</span>
+        <span class="section-title">עולה לבמה — הצגה עצמית</span>
+        <span class="section-time">~30 שניות</span>
+      </div>
+      <p class="spoken">היי, אני גל דולב. מנהלת מוצר ו-AI lead בגייד. בשנה האחרונה ליוויתי מאות מעצבים ואנשי פרודקט בעבודה עם AI — ומשהו שקרה לי באמצע הדרך שינה לי את הכל. אני פה כדי לספר לכם מה קרה.</p>
+    </div>
+
+    <!-- [2] THE GIRL -->
+    <div class="section" id="s2">
+      <div class="section-header">
+        <span class="section-num">2</span>
+        <span class="section-title">הילדה בת ה-11</span>
+        <span class="section-time">~4 דקות</span>
+      </div>
+      <p class="spoken">אני רוצה שנחזור להרגיש את ההרגשה הזאת של להיעלם בתוך קראפט.</p>
+      <p class="spoken">אני רוצה להחזיר אתכם לרגע אחד בזמן. אני בת 11. חצות. כל הבית ישן, ורק בחדר שלי יש אור כחלחל מהמסך. אני בונה אתר מעריצים לפיבי מ׳מכושפות׳.</p>
+      <p class="spoken">ה-HTML היה נוראי.</p>
+      <p class="spoken">הצבעים היו —</p>
+      <div class="direction">עצירה.</div>
+      <p class="spoken">טוב, אני לא רוצה לדבר על מה הצבעים היו.<br>הלייאאוט היה פשע נגד היוזביליטי.</p>
+      <p class="spoken">אבל אני זוכרת שישבתי בחדר שלי, והייתה לי מעין הרגשה כזאת.<br>לא ״אני לומדת סקיל עם ערך״. לא ״זה ייראה טוב בפורטפוליו שלי״.<br>הייתה לי הרגשה. תחושה. לא יודעת.<br>של ליצור משהו שלא היה קיים לפני. של לשחק. של להחליט שזה ילך לשם סתם כי זה פשוט מרגיש נכון.</p>
+      <div class="direction">להסתכל עליהם בחמימות</div>
+      <p class="spoken">זו הסיבה שחלקנו בחדר הזה, לא? בגלל שמתישהו — בגיל 11, בגיל 17, בגיל 28 — הרגשנו את ההרגשה הזו. נאבדנו בתוך הקראפט. יצרנו משהו מאפס, נכנסנו לטראנס, לפלואו, והתעוררנו ממנו אחרי שעות עם משהו שמרגיש כמו יצירת אומנות.</p>
+      <div class="direction">עצירה של שתי שניות. שישקע. שיזכרו בילדה בת ה-11 שלהם.</div>
+    </div>
+
+    <!-- [3] THE THEFT -->
+    <div class="section" id="s3">
+      <div class="section-header">
+        <span class="section-num">3</span>
+        <span class="section-title">הגניבה</span>
+        <span class="section-time">~5 דקות</span>
+      </div>
+      <div class="direction">האנרגיה משתנה — עדיין חם, אבל עם כנות</div>
+      <p class="spoken">אני רוצה לספר לכם מה קרה לילדה הזו בת ה-11.</p>
+      <p class="spoken">היא גדלה. עשתה תואר אומנותי. נכנסה להייטק. והרגישה את אותה הרגשה שהייתה לה אז, ב-12 בלילה, כשבנתה אתר מעריצים לפיבי ממכושפות. היא הופתעה לגלות כמה אומנות יש בלעצב מוצר. התאהבה בזה — בכאוס היצירתי שהופך ליצירה מוגמרת. בלהיות עם קנבס ריק ולסיים עם מוצר.</p>
+      <p class="spoken">אבל התפקיד השתנה. ושנה אחרי שנה, משהו נלקח ממנה.</p>
+      <p class="spoken">בשנים הראשונות הפלואו היה מגניב — מראיון משתמש, להבנה עמוקה של מה באמת כואב ליוזר, ליצירת מוצר שפותר את הכאב הזה בצורה מפתיעה. הרגשתי כל כולי שמצאתי את המקום שלי.</p>
+      <p class="spoken">אבל ככל שהשנים עברו, התווספו שכבות. עוד תלויות, עוד כלים, כמויות של חלונות פתוחים — פיגמה, סליידס, סלאק, זום, אוקטה — ועוד אינסוף. פגישות סינכרון על פגישות סינכרון. באחת החברות שעבדתי בה, לקראת פגישה חודשית הייתה פגישה כדי לסכם אילו סליידים יהיו, אחריה הכנו סליידים, ואז עוד פגישה כדי להסנתכרן על הסליידים, ואז הפגישה עצמה, ואחרי הפגישה — רטרוספקטיב על הפגישה.</p>
+      <p class="spoken">וזה לא רק הפגישות — זה גם שלמדתי את הפרוסס, את הפוליטיקה. לתקתק פיתרונות כי יש לחץ מלמעלה, כי סיילס מכרו משהו שלא ברודמאפ. לתקתק פיצ׳רים.</p>
+      <div class="direction">לבלוע רוק, להסתכל למטה</div>
+      <p class="spoken">התחלתי להרגיש יותר כמו מפעל ייצור מ<strong>יוצרת</strong>. לא תלונה על עומס. הרגשתי שנלקחה ממני היכולת להחליט בעצמי על עצמי: מעין חוויה של ״לא אני יוצרת״ — אלא ״מייצרים דרכי.״</p>
+      <p class="spoken">וכשהתחלנו לעבוד עם AI, הרגשתי שזה נלקח ממני אפילו יותר. התחלתי להרגיש שאני מפקידה את המוח שלי לצ׳אט ג׳יפיטי ומתנוונת. מפסיקה לשהות בבעיה. מפסיקה לשהות ביצירה.</p>
+      <p class="spoken">ובלי לשים לב, האוטומציה לא עצרה בדברים הטכניים — היא התחילה לעשות אוטומציה גם למחשבה שלי. <strong>השריר של היצירה פשוט הפסיק לעבוד.</strong></p>
+      <p class="spoken">אחרי סבב ראיונות משתמשים, ישבתי עם דפים של הערות מבולגנות. משהו דפק לי — פטרן שכמעט ראיתי. קשר בין מה שיוזרית אחת אמרה לבין מה שיוזר אחר <em>לא</em> אמר. אבל זה היה מטושטש. לא נוח. מהסוג שפעם היה גורם לי לשרבט על מפיות עד שהתמונה מתגבשת.</p>
+      <p class="spoken">במקום זה, הדבקתי את כל ההערות לצ׳אט וביקשתי סינתזה. תוך שניות קיבלתי נושאים נקיים, בולטים ברורים, כיוון. הרגשתי הקלה. התקדמתי.</p>
+      <p class="spoken">המוצר יצא. הוא היה בסדר. אף אחד לא התלונן.</p>
+      <div class="direction">ביט</div>
+      <p class="spoken">אבל חודשים אחרי, בראיון אחר, יוזרית אמרה לי בדיוק את הדבר שדפק לי — הדבר שכמעט ראיתי. והבנתי: התשובה הייתה אצלי. היא ישבה בתוך העמימות. פשוט לא נתתי לה להתפתח, כי AI נתן לי דרך החוצה.</p>
+      <div class="direction">ביט ארוך</div>
+      <p class="spoken">אני לעולם לא אדע מה המוצר הזה יכול היה להיות.</p>
+      <p class="spoken">והילדה הזו — שנשארה ערה עד חצות כי להיאבד בקראפט הייתה ההרגשה הכי טובה בעולם — נהייתה שקטה יותר ושקטה יותר.<br>עד שיום אחד שכחתי ממנה לגמרי.<br>האמת העצובה — אני הסגרתי אותה לרשויות ה-AI. לשם הנוחות.</p>
+      <div class="direction">ביט ארוך. שקט.</div>
+      <p class="spoken">אני פה כי מצאתי את הילדה הזו שוב. בטעות. ואני רוצה לספר לכם איך.</p>
+    </div>
+
+    <!-- [4] THE UNDERSTANDING -->
+    <div class="section" id="s4">
+      <div class="section-header">
+        <span class="section-num">4</span>
+        <span class="section-title">ההבנה — הרגע שהכל השתנה</span>
+        <span class="section-time">~4 דקות</span>
+      </div>
+      <div class="direction">רגע של שקט לפני שממשיכים. מעבר מכאב לבהירות.</div>
+      <p class="spoken">הרגע ההוא — כשהבנתי שוויתרתי על התשובה שכבר הייתה לי — לימד אותי משהו שהשפיע על כל מה שעשיתי אחר כך.</p>
+      <p class="spoken">AI נתן לי סינתזה נקייה ומסודרת. נושאים ברורים. כיוון הגיוני. זה לא באג — זה פיצ׳ר. ככה הוא בנוי. AI עונה לפי סבירות סטטיסטית. הוא תמיד יקלע לממוצע. אבל עיצוב טוב, חוויית משתמש שמשנה התנהגות — זו סטיית תקן. זה לא הדבר הממוצע שכולם עושים. זה הדיוק של הרגע האנושי.</p>
+      <p class="spoken">ואם AI תמיד נותן את הממוצע — אז הנשק היחיד שלי הוא בדיוק מה שהפסקתי להשתמש בו: הדבר שהוא <em>לא</em> ממוצע. הדבר שהוא שלי.</p>
+      <p class="spoken">אתם מכירים את הרגע הזה שאתם במקלחת, או בנהיגה, מרוחים לגמרי, ופתאום — בום — התשובה לבעיה שנתקעתם עליה כל השבוע פשוט מופיעה?</p>
+      <p class="spoken">זה לא מקרי. יש רשת במוח שפעילה דווקא כשאנחנו <em>לא</em> מרוכזים — כשאנחנו בבהייה, בחלומות בהקיץ. שם המוח שולף שברים: שיחה ששמעתם, הרגשה מהבוקר, פטרן שהבחנתם בו לפני שלוש שנים — ומחבר אותם בדרכים שאף מודל סטטיסטי לא יכול לחזות.</p>
+      <p class="spoken">הנה ההבדל:<br>תבקשו מ-AI לעצב אפליקציית תזכורות לתרופות. הוא יציע נוטיפיקציה עם כפתור ״אישור.״ הגיוני. משעמם.<br>אבל אתם? אתם בנהיגה חזרה, ופתאום עולה לכם זיכרון מהריב של הבוקר כי בן הזוג שכח לקנות חלב — ואתם מבינים שמה שחסר במוצר זו לא תזכורת, אלא <em>אחריות משותפת</em>. לעצב פיצ׳ר ששולח התראה לבן משפחה רק אם המשתמש לא אישר.</p>
+      <p class="spoken">את הרעיון הזה אף מודל לא היה מייצר. הוא יצא מהחיים שלכם.</p>
+      <div class="direction">סלייד: מחקר — מומחים אנושיים מול AI</div>
+      <p class="spoken">ויש לזה גיבוי מחקרי: כשהשוו מומחים אנושיים מול AI בניתוח ראיונות איכותניים, בשאלות פשוטות AI ניצח. כי אנחנו מסבכים את הפשוט. אבל בשאלות המורכבות? המומחים דורגו גבוה יותר — למרות שסטטיסטית הם היו פחות ״מדויקים.״ למה? כי הם קראו בין השורות. סאבטקסט. רגש. דברים שהמערכת העצבית שלנו קולטת בלי מילים. AI פשוט לא קורא את החדר.</p>
+      <p class="spoken">אז הבנתי — אם אני משלבת את מה ש-AI חזק בו עם מה ש<em>אני</em> חזקה בו, במקום למסור לו את הכל, התוצאות הרבה יותר נכונות ליוזר. וגם — ההרגשה הזו? היא חוזרת.</p>
+    </div>
+
+    <!-- [5] THE NEW WAY -->
+    <div class="section" id="s5">
+      <div class="section-header">
+        <span class="section-num">5</span>
+        <span class="section-title">הדרך החדשה — איך זה נראה בפועל</span>
+        <span class="section-time">~10 דקות</span>
+      </div>
+      <div class="direction">האנרגיה עולה. מפה והלאה — הראאה, לא הסברה.</div>
+      <p class="spoken">אז התחלתי לעבוד אחרת. ואני רוצה להראות לכם איך, כי ראיתם את זה בדמו — עכשיו אני רוצה לפרק את מה שקרה שם.</p>
+
+      <div class="sub-title">הכלל שמנחה אותי: לפני שפותחים צ׳אט — 3 בולטים</div>
+      <p class="spoken">לפני שאני כותבת פרומפט ראשון, אני נותנת למחשבות לנדוד. יושבת עם הבעיה. עושה ראיונות משתמשים בעצמי. לא נותנת ל-AI לקצר לי את השהייה בקנבס הריק — כי שם קורה הקסם.</p>
+      <p class="spoken">ורק אז, אחרי שיש לי משהו <em>שלי</em> — אני פותחת צ׳אט וכותבת 3 בולטים: מהבטן, מהראיון, מהתובנה. הקונטקסט הממוקד שלי. ככה אני נשארת ״הקול הראשון״ בחדר, ו-AI מתאים את עצמו <em>אליי</em> — לא להפך.</p>
+
+      <div class="sub-title">הכלי: Cursor</div>
+      <div class="direction">דמו ברקע: שלב 1 — דאטה</div>
+      <p class="spoken">ועכשיו — הכלי שדרכו עשיתי את כל מה שראיתם.</p>
+      <p class="spoken">Cursor הוא IDE — כלי שפעם רק מפתחים כתבו בו קוד. היום גם אנשים כמונו, בלי רקע פיתוחי, יכולים לתקשר איתו בשפה פשוטה. ממש כמו צ׳אט. אני יודעת שזה נראה מפחיד — גם לי זה היה. תישארו איתי.</p>
+      <p class="spoken">ביום חמישי ההוא, התחלתי את הבוקר משאלה על הדאטה של המוצר שלנו. תוך דקות הבנתי שיש בעיית נטישה שלא ידעתי עליה. פעם הייתי צריכה אנליסטית, פגישת סינכרון ושבוע של המתנה. עכשיו — שאלתי שאלה וקיבלתי תשובה.</p>
+
+      <div class="sub-title">אייג׳נטים — AI שלא רק עונה, אלא עושה</div>
+      <div class="direction">דמו ברקע: שלב 2 — מתחרים</div>
+      <p class="spoken">אחר כך רציתי להבין איך מתחרים פתרו את אותה בעיה. ופה זה נהיה מעניין.</p>
+      <p class="spoken">אייג׳נט הוא לא צ׳אט. הוא מודל שיכול ממש לבצע פעולות — לגלוש באינטרנט, להיכנס לאתרים, ללחוץ על כפתורים, לצלם מסך. ביקשתי מצוות אייג׳נטים להיכנס ל-5 אתרים של מתחרים, לעבור את הפלואו שלהם כמו יוזר, לצלם מסך בכל שלב, ולסדר לי את הכל בבורד.</p>
+      <p class="spoken">ומה עשיתי בזמן שהם עבדו? ישבתי עם הבורד הריק שלי וחשבתי. חזרתי לראיונות. נתתי למחשבות לנדוד. הזמן שפעם הלך על העתקת סקרינשוטים — הפך לזמן שבו אני <em>יוצרת</em>.</p>
+      <p class="spoken">אבל — מתי הם מסתבכים? כשנותנים להם פקודה אחת גדולה והם הולכים לאיבוד. הטיפ: אל תגידו ״תעשה.״ תגידו: ״תכתוב לי תוכנית של 5 שלבים, ותעצור לאישור שלי אחרי כל שלב.״ ראשית, זה פשוט עובד יותר טוב טכנולוגית — האייג׳נט נותן תוצר טוב יותר ככה. אבל יותר חשוב — זה משנה את מערכת היחסים. מזל טוב, קודמתם — אתם ה-VP Design, והוא הג׳וניור הכי מוכשר בעולם. הוא צריך את ההדרכה שלכם כדי לבצע בצורה הטובה ביותר.</p>
+
+      <div class="sub-title">הדף הלבן</div>
+      <div class="direction">דמו ברקע: שלב 3 — הנייר. להתעכב.</div>
+      <p class="spoken">ואז? לקחתי דף A4 ורשמתי שמונה סקיצות.</p>
+      <p class="spoken">שימו לב — את הרגע הזה, AI לא עשה. <strong>אני</strong> עשיתי. עם עט ונייר. בדיוק כמו בגיל 11. הרגע הזה לא השתנה. והכי חשוב — שהרגע הזה <em>לא</em> ישתנה.</p>
+      <p class="spoken">גררתי את הסקיצה ל-Cursor ותוך פחות מדקה, הייתה לי גרסה עובדת לפי מערכת העיצוב שלנו.</p>
+      <div class="direction">דמו ברקע: שלב 4</div>
+
+      <div class="sub-title">משחק הסימס</div>
+      <div class="direction">דמו ברקע: שלבים 5-7</div>
+      <p class="spoken">אחרי יוזר טסטינג וסינתזה — הגיע הרגע של להציג לסטייקהולדרים. ופתאום חשבתי: למה סליידים? אז בניתי ב-Cursor משחק סימס קטן שמדמה את מסע המשתמש לפי מה שעלה בראיונות. הסטייקהולדרים לא קראו סליידים — הם שיחקו. הם חוו את הבעיה.</p>
+      <div class="direction">ביט</div>
+      <p class="spoken">זה הרגע שבו הבנתי: Cursor לא סתם כלי. הוא שחרר לי יכולות שפעם לא היו לי — אנימציה, פרוטוטייפ אינטראקטיבי, ויזואליזציית דאטה, תלת מימד. הפרזנטציה הזו? בנויה ב-Cursor. היא קוד, לא Google Slides.</p>
+      <p class="spoken">וזוכרים את השכבות שסיפרתי עליהן? הכלים, החלונות, הפגישות על הפגישות? הן התחילו להיעלם. לא כי מצאתי עוד כלי יעיל — אלא כי פתאום הייתה לי שוב הרשות לשבת עם הקנבס הריק. הרעש שנבנה שנים נשתק, ומה שנשאר היה הקראפט.</p>
+      <p class="spoken">ופתאום — הרגשת חצות. הרגשת פיבי. <strong>הילדה חזרה.</strong></p>
+    </div>
+
+    <!-- [6] POSSIBILITIES -->
+    <div class="section" id="s6">
+      <div class="section-header">
+        <span class="section-num">6</span>
+        <span class="section-title">מה עוד אפשר — פתיחת אופקים</span>
+        <span class="section-time">~1.5 דקות</span>
+      </div>
+      <div class="direction">סלייד: סימולציית יוזרים / שאלות למודל במקום למפתח / בדיקת שימושיות בקליק</div>
+      <p class="spoken">מה שהראיתי לכם זה יום חמישי אחד. אבל יש עוד מלא.</p>
+      <p class="spoken">תדמיינו שאתם מריצים סימולציה של 20 יוזרים על פלואו שעיצבתם — לפני שבנאדם אחד נגע בזה — ובמקום לחכות שבועיים לסבב בדיקות, אתם חוזרים לשבת עם התובנות. או שואלים שאלה על מקרי קצה בקוד המוצר — בלי לתפוס פגישת סינכרון עם המפתח — ומשתמשים בזמן הזה כדי לחשוב על הפתרון, לא על הלוגיסטיקה. או מריצים בדיקת שימושיות אוטומטית על עיצוב שסיימתם — ובמקום לבנות תשתית למחקר, חוזרים ישר לקנבס.</p>
+      <p class="spoken">הקטע הוא לא ״ככה תעשו UX Research עם AI.״ הקטע הוא המיינדסט: כל דבר שהאייג׳נט לוקח מכם — הוא מחזיר לכם זמן עם הקראפט. להתייחס לעבודה היום-יומית שלנו כאל יצירה שוב. להחזיר את החופש של הקנבס הריק — בלי לאבד את הביצוע.</p>
+      <p class="spoken">זה הקראפט החדש. פשוט ב-form שאנחנו לא רגילים אליו. זה הכל.</p>
+    </div>
+
+    <!-- [6.5] TAKEAWAYS -->
+    <div class="section" id="s65">
+      <div class="section-header">
+        <span class="section-num">6.5</span>
+        <span class="section-title">מה לקחת מפה</span>
+        <span class="section-time">~1 דקה</span>
+      </div>
+      <div class="direction">סלייד: 5 טייקאווייז</div>
+      <p class="spoken">אז לפני שנסגור, בואו נעגן:</p>
+      <ol class="takeaway-list">
+        <li><strong>AI תמיד ייתן לכם את הממוצע.</strong> <span>ככה הוא בנוי. הוא מלך הסבירות הסטטיסטית.</span></li>
+        <li><strong>המוזרות שלכם היא הנשק היחיד שלכם.</strong> <span>מחשבות המקלחת, האינטואיציה, הסאבטקסט — AI לעולם לא יוכל למצע אותם.</span></li>
+        <li><strong>אל תפקידו את החשיבה. תפקידו את הביצוע.</strong> <span>תישבו עם הקנבס הריק קודם. תנו ל-AI את הידיים, לא את המוח.</span></li>
+        <li><strong>אתם היוצרים. AI מרחיב את הקנבס.</strong> <span>הוא מוריד חסמים — לא מחליף כיוון.</span></li>
+        <li><strong>הקראפט לא מת. הוא פשוט שינה צורה.</strong> <span>אותה הרגשת חצות, אותו פלואו — ב-form חדש.</span></li>
+      </ol>
+    </div>
+
+    <!-- [7] CLOSING -->
+    <div class="section" id="s7">
+      <div class="section-header">
+        <span class="section-num">7</span>
+        <span class="section-title">סגירה — הילדה חזרה</span>
+        <span class="section-time">~2 דקות</span>
+      </div>
+      <div class="direction">סלייד: QR</div>
+      <p class="spoken">ניסיתי לתת לכם חכה ולא דג — אבל דגים זה טעים, וזו דרך טובה להתחיל. העליתי 10 טיפים פרקטיים לעבודה עם אייג׳נטים — גם אם אתם עובדים איתם הרבה, וגם אם המילה אייג׳נט חדשה לכם. ובשבועות הקרובים אעלה מדריכים לכל מה שראיתם כאן. בחינם. תסרקו.</p>
+      <div class="direction">לאט. בעיניים.</div>
+      <p class="spoken">ואם יש דבר אחד שהייתי רוצה שתצאו איתו היום —</p>
+      <p class="spoken"><strong>אל תנסו להכחיד את המוזרות שלכם. תשתמשו בה.</strong><br>החתימה שלכם. הקול שלכם. הדרך המוזרה שרק אתם הייתם פותרים בעיה ככה.<br>זה הדבר היחיד ש-AI לעולם לא יוכל למצע.</p>
+      <p class="spoken">הכלים שם כדי שתחזרו להוביל את הספינה למקומות שרק הדמיון שלכם יכול לראות. ה-AI הוא רק המנוע. אבל אתם — אתם הלב של היצירה הזאת.</p>
+      <p class="spoken">תתחילו <strong>ליצור</strong>, לא רק לייצר, כבר מחר בבוקר.</p>
+      <div class="direction">חיוך. שקט. לצאת.</div>
+    </div>
+
+  </main>
+</div>
+
+<div class="save-toast" id="saveToast">נשמר</div>
+<button class="export-btn" id="exportBtn">הורד HTML</button>
+<button class="reset-btn" id="resetBtn">אפס עריכות</button>
+
+<script>
+const STORAGE_KEY = 'gal-talk-edits';
+const mainEl = document.getElementById('main');
+const navLinks = document.querySelectorAll('nav a');
+const sections = document.querySelectorAll('.section[id^="s"]');
+const progressBar = document.getElementById('progressBar');
+const saveToast = document.getElementById('saveToast');
+
+// --- EDITABLE SETUP ---
+const editableSelectors = '.spoken, .direction, .sub-title, .section-title, .section-time, .message-box p, .message-box .label, .takeaway-list li, .demo-list li';
+const editables = document.querySelectorAll(editableSelectors);
+
+editables.forEach((el, i) => {
+  el.setAttribute('contenteditable', 'true');
+  el.setAttribute('data-key', 'e-' + i);
+});
+
+function loadEdits() {
+  try {
+    const saved = JSON.parse(localStorage.getItem(STORAGE_KEY) || '{}');
+    editables.forEach(el => {
+      const key = el.dataset.key;
+      if (saved[key] !== undefined) {
+        el.innerHTML = saved[key];
+      }
+    });
+  } catch (e) {}
+}
+
+let saveTimeout;
+function showSaveToast() {
+  saveToast.classList.add('show');
+  clearTimeout(saveTimeout);
+  saveTimeout = setTimeout(() => saveToast.classList.remove('show'), 1200);
+}
+
+function saveEdits() {
+  const data = {};
+  editables.forEach(el => {
+    data[el.dataset.key] = el.innerHTML;
+  });
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+  showSaveToast();
+}
+
+let debounce;
+document.addEventListener('input', e => {
+  if (e.target.closest('[contenteditable]')) {
+    clearTimeout(debounce);
+    debounce = setTimeout(saveEdits, 400);
+  }
+});
+
+loadEdits();
+
+// --- EXPORT ---
+document.getElementById('exportBtn').addEventListener('click', () => {
+  editables.forEach(el => el.removeAttribute('contenteditable'));
+
+  const clone = document.documentElement.cloneNode(true);
+
+  const toast = clone.querySelector('.save-toast');
+  const expBtn = clone.querySelector('.export-btn');
+  const rstBtn = clone.querySelector('.reset-btn');
+  if (toast) toast.remove();
+  if (expBtn) expBtn.remove();
+  if (rstBtn) rstBtn.remove();
+
+  const html = '<!DOCTYPE html>\n' + clone.outerHTML;
+
+  editables.forEach(el => el.setAttribute('contenteditable', 'true'));
+
+  const blob = new Blob([html], { type: 'text/html' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = 'presenter.html';
+  a.click();
+  URL.revokeObjectURL(url);
+});
+
+// --- RESET ---
+document.getElementById('resetBtn').addEventListener('click', () => {
+  if (confirm('לאפס את כל העריכות?')) {
+    localStorage.removeItem(STORAGE_KEY);
+    location.reload();
+  }
+});
+
+// --- SCROLL / NAV ---
+function updateProgress() {
+  const scrollTop = mainEl.scrollTop;
+  const scrollHeight = mainEl.scrollHeight - mainEl.clientHeight;
+  const pct = scrollHeight > 0 ? (scrollTop / scrollHeight) * 100 : 0;
+  progressBar.style.width = pct + '%';
+}
+
+function updateActiveNav() {
+  let current = '';
+  const offset = mainEl.scrollTop + 120;
+  sections.forEach(s => {
+    if (s.offsetTop <= offset) current = s.id;
+  });
+  navLinks.forEach(a => {
+    a.classList.toggle('active', a.dataset.section === current);
+  });
+}
+
+mainEl.addEventListener('scroll', () => {
+  updateProgress();
+  updateActiveNav();
+});
+
+const sectionIds = Array.from(sections).map(s => s.id);
+
+document.addEventListener('keydown', e => {
+  const active = document.activeElement;
+  const isEditing = active && active.isContentEditable;
+
+  if ((e.key === 'ArrowDown' || e.key === 'ArrowUp') && !isEditing) {
+    e.preventDefault();
+    const activeLink = document.querySelector('nav a.active');
+    const currentId = activeLink ? activeLink.dataset.section : sectionIds[0];
+    const idx = sectionIds.indexOf(currentId);
+    let next;
+    if (e.key === 'ArrowDown') {
+      next = Math.min(idx + 1, sectionIds.length - 1);
+    } else {
+      next = Math.max(idx - 1, 0);
+    }
+    document.getElementById(sectionIds[next]).scrollIntoView({ behavior: 'smooth' });
+  }
+
+  if ((e.key === 'f' || e.key === 'F') && !isEditing) {
+    if (!document.fullscreenElement) {
+      document.documentElement.requestFullscreen();
+    } else {
+      document.exitFullscreen();
+    }
+  }
+});
+
+updateActiveNav();
+</script>
+</body>
+</html>
